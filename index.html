@@ -115,42 +115,50 @@
     // ВСЕ tg-вызовы изолированы в try/catch, скрипт никогда не падает.
     let tg = null;
     let chatId = "360926813";
-     let columns = [{ name: "Колонка 1" }, { name: "Колонка 2" }];
+    let columns = [{ name: "Колонка 1" }, { name: "Колонка 2" }];
     let speechRec = null;
     let isRecording = false;
 
-    function initTg() {
+    // initTg: получает tg объект, извлекает chat_id, настраивает MainButton
+    // НЕ обнуляет tg при internal ошибках Telegram (iOS WKWebView бросает)
+    function initTg(attempt) {
       try {
         tg = window.Telegram?.WebApp;
-        if (!tg) return false;
-        // iOS: ready() может бросить → catch. setHeaderColor — optional.
-        try { if (typeof tg.ready === "function") tg.ready(); } catch(e) {}
-        try { if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#0a0a0f"); } catch(e) {}
-        // chat id extraction
-        const chat = tg.initDataUnsafe?.chat;
-        if (chat?.id) chatId = String(chat.id);
-        else if (tg.initDataUnsafe?.user?.id) chatId = String(tg.initDataUnsafe.user.id);
-        const name = tg.initDataUnsafe?.user?.first_name;
-        if (name) { const sub = document.getElementById("subtitle"); if (sub) sub.textContent = `Привет, ${name}!`; }
-        // MainButton config (iOS 26: защита через try/catch)
+        if (!tg) return false;  // tg ещё не готов — будем polling
+        // chat id + user (iOS 26: initDataUnsafe может быть undefined → try/catch)
+        try {
+          const chat = tg.initDataUnsafe?.chat;
+          if (chat?.id) chatId = String(chat.id);
+          else if (tg.initDataUnsafe?.user?.id) chatId = String(tg.initDataUnsafe.user.id);
+          const name = tg.initDataUnsafe?.user?.first_name;
+          if (name) { const sub = document.getElementById("subtitle"); if (sub) sub.textContent = `Привет, ${name}!`; }
+        } catch(e) { console.warn("[tg] chat/user parse:", e); }
+        // MainButton — защищённый вызов (iOS иногда выбрасывает)
         try {
           if (tg.MainButton && typeof tg.MainButton.setParams === "function") {
             tg.MainButton.setParams({ text: "✨ Готово", color: "#a78fea", text_color: "#000" });
           }
-        } catch(e) { console.warn("MainButton:", e); }
-        return true;
+        } catch(e) { console.warn("[tg] MainButton.setParams:", e); }
+        // ready + setHeaderColor
+        try { if (typeof tg.ready === "function") tg.ready(); } catch(e) {}
+        try { if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#0a0a0f"); } catch(e) {}
+        console.log("[tg] initialized OK, chatId=" + chatId);
+        return true;  // tg готов — STOP polling
       } catch(e) {
-        console.warn("initTg error:", e);
-        tg = null;
-        return false;
+        console.warn("[tg] initTg attempt", attempt, "error:", e);
+        // НЕ обнуляем tg — он может быть частично ready (sendData доступен, MainButton битый)
+        tg = window.Telegram?.WebApp || tg;  // сохраняем если tg есть, хоть с ошибкой
+        return tg ? true : false;  // если tg существует (хоть с ошибкой) — consider ready
       }
     }
 
-    // Poll tg готовность — но НЕ более 5 сек (иначе iOS зависает)
+    // Poll tg готовность — максимум 8 сек (iOS иногда медленнее tg.js)
+    let tgPollAttempts = 0;
     const tgPoll = setInterval(() => {
-      if (initTg()) clearInterval(tgPoll);
+      tgPollAttempts++;
+      if (initTg(tgPollAttempts)) clearInterval(tgPoll);
     }, 100);
-    setTimeout(() => clearInterval(tgPoll), 5000);
+    setTimeout(() => { try { clearInterval(tgPoll); } catch(e){} }, 8000);
 
     const toast = document.getElementById("toast");
     const showToast = (msg) => {
@@ -241,18 +249,8 @@
     });
 
     // --- сохранить → tg.sendData → bot.py (web_app_data) ---
-    // NOTE: tg.sendData доставляется bot'у ТОЛЬКО через KeyboardButton(web_app) из
-    // /start. Menu button "Ёblist" → tg.sendData вызывается, но bot его НЕ получит
-    // (Telegram limitation: menu_button требует answerWebAppQuery). PTB 22.6 не
-    // парсит web_app_query → только KeyboardButton path.
-    // isKeyboardButtonContext: tg.initData пустой в menu_button, но может быть
-    // пустым и в KeyboardButton (Telegram bug) → fallback на tg.showPopup инструкцию.
-    function isKeyboardButtonContext() {
-      try {
-        // initDataNonEmpty ИЛИ initDataUnsafe.chat/user есть → значит tg.sendData доставит
-        return !!(tg && tg.sendData && (tg.initData?.length > 0 || tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id));
-      } catch(e) { return false; }
-    }
+    // tg.sendData доставляется bot'у ТОЛЬКО через KeyboardButton(web_app) из /start.
+    // Menu button ("Ёblist") → tg.sendData вызывается, но bot его НЕ получит.
     document.getElementById("save-btn").addEventListener("click", async () => {
       const rows = [];
       document.querySelectorAll("#table-body tr").forEach(tr => {
@@ -261,23 +259,26 @@
       });
       if (!rows.length) { showToast("Нечего сохранять — добавьте строки"); return; }
       const payload = { action: "add_rows", chat_id: chatId, columns: columns.map(c => c.name), rows: rows };
-      if (tg && tg.sendData) {
-        if (isKeyboardButtonContext()) {
-          // ✅ через KeyboardButton — tg.sendData доставит bot'у
-          tg.sendData(JSON.stringify(payload));
+
+      // ✅ ВСЕГДА tg.sendData если tg доступен (KeyboardButton → bot получит,
+      //   menu_button → toast + инструкция, вне Telegram → fallback)
+      if (tg && typeof tg.sendData === "function") {
+        try { tg.sendData(JSON.stringify(payload)); } catch(e) { console.warn("[tg] sendData threw:", e); }
+        var hasInitData = false;
+        try { hasInitData = !!(tg.initData && tg.initData.length > 0) || !!(tg.initDataUnsafe && (tg.initDataUnsafe.chat?.id || tg.initDataUnsafe.user?.id)); } catch(e) {}
+        if (hasInitData) {
           showToast("✅ Отправлено в Telegram!");
         } else {
-          // ⚠️ menu_button context: tg.sendData НЕ доставит → инструкция
-          showToast("⚠️ Данные не доставлены (menu button). Открываю чат с ботом → /start → кнопка внизу...");
+          // menu_button context (initData пуст) → показываем инструкцию
+          showToast("⚠️ Через меню tg.sendData не работает → открываю чат с ботом...");
           try { if (tg.openLink) tg.openLink("https://t.me/Eblistbot?start=table"); } catch(e) {}
           try {
             if (tg.showPopup && typeof tg.showPopup === "function") {
-              tg.showPopup({ type: "alert", title: "Ёblist", message: "Через меню tg.sendData не работает. Нажмите /start в чате с ботом → кнопка «📋 Ёblist — открыть таблицу» внизу → сохраняйте через 💾 Сохранить в Telegram ✅" });
+              tg.showPopup({ type: "alert", title: "Ёblist", message: "Через меню 'Ёblist' tg.sendData не доставляется боту. Нажмите /start в чате с ботом → кнопка '📋 Ёblist — открыть таблицу' ВНИЗУ чата → сохраняйте через 💾 Сохранить ✅" });
             }
           } catch(e) {}
         }
       } else {
-        // вне Telegram
         showToast("💾 " + rows.length + " строк | " + columns.length + " колонок (fallback: вне Telegram)");
         console.log("[no-tg] payload:", payload);
       }
