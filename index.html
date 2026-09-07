@@ -241,13 +241,17 @@
     });
 
     // --- сохранить → tg.sendData → bot.py (web_app_data) ---
-    // IMPORTANT: tg.sendData доставляется bot'у ТОЛЬКО если Web App открыта через
-    // KeyboardButton(web_app) из /start. Menu button ("Ёblist") → tg.sendData
-    // не доставит данные (Telegram limitation — требует answerWebAppQuery).
-    // Поэтому: если initData пуст (menu_button context) → инструктируем пользователя.
+    // NOTE: tg.sendData доставляется bot'у ТОЛЬКО через KeyboardButton(web_app) из
+    // /start. Menu button "Ёblist" → tg.sendData вызывается, но bot его НЕ получит
+    // (Telegram limitation: menu_button требует answerWebAppQuery). PTB 22.6 не
+    // парсит web_app_query → только KeyboardButton path.
+    // isKeyboardButtonContext: tg.initData пустой в menu_button, но может быть
+    // пустым и в KeyboardButton (Telegram bug) → fallback на tg.showPopup инструкцию.
     function isKeyboardButtonContext() {
-      // tg.initData есть только для KeyboardButton-launched Web Apps
-      return !!(tg && tg.initData);
+      try {
+        // initDataNonEmpty ИЛИ initDataUnsafe.chat/user есть → значит tg.sendData доставит
+        return !!(tg && tg.sendData && (tg.initData?.length > 0 || tg.initDataUnsafe?.chat?.id || tg.initDataUnsafe?.user?.id));
+      } catch(e) { return false; }
     }
     document.getElementById("save-btn").addEventListener("click", async () => {
       const rows = [];
@@ -257,20 +261,23 @@
       });
       if (!rows.length) { showToast("Нечего сохранять — добавьте строки"); return; }
       const payload = { action: "add_rows", chat_id: chatId, columns: columns.map(c => c.name), rows: rows };
-      if (tg && tg.sendData && isKeyboardButtonContext()) {
-        tg.sendData(JSON.stringify(payload));
-        showToast("✅ Отправлено в Telegram!");
-      } else if (tg && !isKeyboardButtonContext()) {
-        // menu_button context: sendData НЕ доставит → открываем чат с ботом для /start → клавиатура
-        showToast("📲 Откроет чат с ботом → /start → кнопка внизу → таблица");
-        try { if (tg.openLink) tg.openLink("https://t.me/Eblistbot?start=table"); } catch(e) {}
-        // fallback: показываем popup с инструкцией
-        try {
-          if (tg.showPopup && typeof tg.showPopup === "function") {
-            tg.showPopup({ type: "alert", title: "Ёblist", message: "Нажмите /start в чате с ботом → кнопка «Открыть таблицу» внизу → тогда сохранение будет работать ✅" });
-          }
-        } catch(e) {}
+      if (tg && tg.sendData) {
+        if (isKeyboardButtonContext()) {
+          // ✅ через KeyboardButton — tg.sendData доставит bot'у
+          tg.sendData(JSON.stringify(payload));
+          showToast("✅ Отправлено в Telegram!");
+        } else {
+          // ⚠️ menu_button context: tg.sendData НЕ доставит → инструкция
+          showToast("⚠️ Данные не доставлены (menu button). Открываю чат с ботом → /start → кнопка внизу...");
+          try { if (tg.openLink) tg.openLink("https://t.me/Eblistbot?start=table"); } catch(e) {}
+          try {
+            if (tg.showPopup && typeof tg.showPopup === "function") {
+              tg.showPopup({ type: "alert", title: "Ёblist", message: "Через меню tg.sendData не работает. Нажмите /start в чате с ботом → кнопка «📋 Ёblist — открыть таблицу» внизу → сохраняйте через 💾 Сохранить в Telegram ✅" });
+            }
+          } catch(e) {}
+        }
       } else {
+        // вне Telegram
         showToast("💾 " + rows.length + " строк | " + columns.length + " колонок (fallback: вне Telegram)");
         console.log("[no-tg] payload:", payload);
       }
