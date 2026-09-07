@@ -110,38 +110,47 @@
   <script>
     "use strict";
 
-    // tg может появиться позже (telegram-web-app.js асинхронен);
-    // используем функцию для lazy-доступа
-    function getTg() {
-      try { return window.Telegram?.WebApp; } catch(e) { return null; }
-    }
-    let chatId = "360926813";  // fallback
-    let columns = [{ name: "Колонка 1" }, { name: "Колонка 2" }];
+    // tg lazy init — iOS 26 WKWebView может давать window.Telegram.WebApp,
+    // но отдельные методы (setParams, MainButton) частично broken →
+    // ВСЕ tg-вызовы изолированы в try/catch, скрипт никогда не падает.
+    let tg = null;
+    let chatId = "360926813";
+     let columns = [{ name: "Колонка 1" }, { name: "Колонка 2" }];
     let speechRec = null;
-    let tgReady = false;
-    // iOS/Telegram: tg.MainButton / setHeaderColor могут быть undefined → try/catch чтобы не падал весь скрипт
-    const tgPoll = setInterval(() => {
-      const tg = getTg();
-      if (tg && !tgReady) {
-        tgReady = true;
-        clearInterval(tgPoll);
-        try {
-          if (typeof tg.ready === "function") tg.ready();
-          if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#0a0a0f");
-        } catch(e) { console.warn("tg init warn:", e); }
+    let isRecording = false;
+
+    function initTg() {
+      try {
+        tg = window.Telegram?.WebApp;
+        if (!tg) return false;
+        // iOS: ready() может бросить → catch. setHeaderColor — optional.
+        try { if (typeof tg.ready === "function") tg.ready(); } catch(e) {}
+        try { if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#0a0a0f"); } catch(e) {}
+        // chat id extraction
         const chat = tg.initDataUnsafe?.chat;
         if (chat?.id) chatId = String(chat.id);
         else if (tg.initDataUnsafe?.user?.id) chatId = String(tg.initDataUnsafe.user.id);
         const name = tg.initDataUnsafe?.user?.first_name;
-        if (name) document.getElementById("subtitle").textContent = `Привет, ${name}!`;
+        if (name) { const sub = document.getElementById("subtitle"); if (sub) sub.textContent = `Привет, ${name}!`; }
+        // MainButton config (iOS 26: защита через try/catch)
         try {
           if (tg.MainButton && typeof tg.MainButton.setParams === "function") {
             tg.MainButton.setParams({ text: "✨ Готово", color: "#a78fea", text_color: "#000" });
           }
-        } catch(e) { console.warn("MainButton setParams warn:", e); }
+        } catch(e) { console.warn("MainButton:", e); }
+        return true;
+      } catch(e) {
+        console.warn("initTg error:", e);
+        tg = null;
+        return false;
       }
+    }
+
+    // Poll tg готовность — но НЕ более 5 сек (иначе iOS зависает)
+    const tgPoll = setInterval(() => {
+      if (initTg()) clearInterval(tgPoll);
     }, 100);
-    setTimeout(() => { try { clearInterval(tgPoll); } catch(e){} }, 5000);
+    setTimeout(() => clearInterval(tgPoll), 5000);
 
     const toast = document.getElementById("toast");
     const showToast = (msg) => {
@@ -240,7 +249,6 @@
       });
       if (!rows.length) { showToast("Нечего сохранять — добавьте строки"); return; }
       const payload = { action: "add_rows", chat_id: chatId, columns: columns.map(c => c.name), rows: rows };
-      const tg = getTg();
       if (tg && tg.sendData) {
         tg.sendData(JSON.stringify(payload));
         showToast("✅ Отправлено в Telegram!");
@@ -259,7 +267,6 @@
 
     // --- скачать: через tg.sendData action=download ---
     document.getElementById("download-btn").addEventListener("click", () => {
-      const tg = getTg();
       if (tg && tg.sendData) {
         tg.sendData(JSON.stringify({ action: "download", chat_id: chatId }));
         showToast("📥 Запрос файла отправлен боту");
@@ -268,11 +275,12 @@
       }
     });
 
-    // --- голос: Web Speech API ---
+    // --- голос: Web Speech API (macOS Safari/Chrome Desktop) ---
+    // iOS/WebKit: SpeechRecognition НЕ поддерживается → fallback на Telegram voice message → whisper
     const voiceBtn = document.getElementById("voice-btn");
     const voiceArea = document.getElementById("voice-area");
     const voiceHint = document.getElementById("voice-hint");
-    let isRecording = false;
+    // isRecording + speechRec объявлены в global scope (line 119-120)
 
     voiceBtn.addEventListener("click", async () => {
       if (isRecording) {
@@ -326,11 +334,12 @@
         showToast("🎙 voice → whisper (в чате с ботом)");
         isRecording = false;
       }
+    });    // <- ЗАКРЫТИЕ voiceBtn.addEventListener("click", ...)
 
     // back swipe (iOS-like)
     let startY = 0;
     document.addEventListener("touchstart", (e) => { startY = e.touches[0].clientY; }, { passive: true });
-    document.addEventListener("touchend", () => { const tg = getTg(); if (startY > 200 && tg?.close) tg.close(); });
+    document.addEventListener("touchend", () => { if (startY > 200 && tg?.close) tg.close(); });
 
     // init
     renderHeader();
