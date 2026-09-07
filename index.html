@@ -122,6 +122,7 @@
       var payload = JSON.stringify({ action:"add_rows", chat_id:chatId, columns:columns, rows:rows });
       // Всегда пытаемся MainButton.sendData (работает в menu_button)
       var t = getTG();
+      if(!t && window.Telegram && window.Telegram.WebApp) t = window.Telegram.WebApp;
       if(t && t.MainButton && typeof t.MainButton.sendData === "function"){
         try { t.MainButton.sendData(payload); toast("✅ Отправлено!"); return; } catch(e){ console.warn("mb.sendData err:",e); }
       }
@@ -140,6 +141,7 @@
     document.getElementById("dl").addEventListener("click", function(){
       var p = JSON.stringify({ action:"download", chat_id:chatId });
       var t = getTG();
+      if(!t && window.Telegram && window.Telegram.WebApp) t = window.Telegram.WebApp;
       if(t && t.MainButton && typeof t.MainButton.sendData === "function"){ try{t.MainButton.sendData(p);} catch(e){} toast("📥 Отправлено"); }
       else if(t && typeof t.sendData==="function"){ try{t.sendData(p);} catch(e){} toast("📥 Отправлено"); }
       else toast("📥 В чате: /download");
