@@ -61,7 +61,9 @@
   <div class="toast" id="toast"></div>
 
   <!-- TG Web App JS -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <!-- Telegram Web App runtime injects window.Telegram.WebApp natively.
+       The tg.js script tag is ONLY for dev/preview outside Telegram — remove it on prod. -->
+  <!-- <script src="https://telegram.org/js/telegram-web-app.js"></script> -->
   <script>
     "use strict";
     // Минимальный tg access — get once, use everywhere
