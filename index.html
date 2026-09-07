@@ -3,376 +3,173 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ёblist — Dynamic Table</title>
+  <title>Ёblist — Таблица</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0a0a0f; --surface: #111118; --surface-2: #171720;
-      --border: #22222e; --text: #f5f5ff; --text-secondary: #9a9ab0;
-      --accent: #a78fea; --danger: #ff6b9d; --success: #51cf9d;
-      --radius: 14px; --transition: all 0.2s cubic-bezier(0.25, 0.86, 0.32, 0.94);
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0a0a0f;--surface:#111118;--surface-2:#171720;--border:#22222e;
+      --text:#f5f5ff;--muted:#9a9ab0;--accent:#a78fea;--danger:#ff6b9d;--success:#51cf9d;--radius:12px
     }
-    body {
-      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg); color: var(--text);
-      -webkit-font-smoothing: antialiased; min-height: 100vh; padding: 16px;
-    }
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-    .header .title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
-    .header .subtitle { font-size: 13px; color: var(--text-secondary); }
-    .table-scroll {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
-      overflow-x: auto; box-shadow: 0 4px 24px rgba(0,0,0,0.15);
-    }
-    table { width: 100%; min-width: 500px; border-collapse: collapse; }
-    th { text-align: center; font-size: 11px; text-transform: uppercase;
-         letter-spacing: 1px; color: var(--text-secondary); padding: 8px 4px 4px; border-bottom: 1px solid var(--border); }
-    th input { width: 100%; padding: 6px 8px; background: var(--surface-2);
-               border: 1px solid var(--border); border-radius: 6px; font-size: 13px; color: var(--text); text-align: center; }
-    th input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
-    td { padding: 4px; }
-    td input { width: 100%; padding: 8px 10px; background: var(--surface-2);
-               border: 1px solid var(--border); border-radius: 6px; font-size: 14px; color: var(--text); text-align: center; }
-    td input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
-    .col-actions { display: flex; gap: 6px; margin-top: 8px; }
-    .btn { padding: 10px 14px; border-radius: var(--radius); border: none;
-           font-size: 13px; font-weight: 600; cursor: pointer; transition: var(--transition);
-           display: flex; align-items: center; justify-content: center; gap: 6px; }
-    .btn:active { transform: scale(0.97); }
-    .btn-success { background: var(--success); color: #000; box-shadow: 0 4px 16px rgba(81,207,157,0.3); }
-    .btn-danger { background: var(--danger); color: #fff; box-shadow: 0 4px 16px rgba(255,107,157,0.3); }
-    .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
-    .btn-ghost:hover { background: var(--surface-2); }
-    .btn-accent { background: var(--accent); color: #000; box-shadow: 0 4px 16px rgba(167,139,234,0.3); }
-    .btn-full { width: 100%; }
-    .voice-area {
-      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 20px; text-align: center; margin-bottom: 20px; transition: var(--transition);
-    }
-    .voice-area.recording { border-color: var(--danger); background: rgba(255,107,157,0.08); }
-    .voice-btn { width: 64px; height: 64px; border-radius: 50%; border: none;
-                 background: var(--accent); color: #000; font-size: 26px; cursor: pointer; margin-bottom: 12px;
-                 display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 24px rgba(167,139,234,0.3);
-                 transition: var(--transition); }
-    .voice-btn.recording { background: var(--danger); color: #fff; animation: pulse-shrink 1s infinite; }
-    @keyframes pulse-shrink { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-    .voice-hint { font-size: 13px; color: var(--text-secondary); min-height: 18px; }
-    .toast {
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--accent); color: #000; padding: 10px 20px; border-radius: 20px;
-      font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.3s;
-      pointer-events: none; z-index: 100;
-    }
-    .toast.show { opacity: 1; }
-    .row-count { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);
+      min-height:100vh;padding:12px;font-size:16px;line-height:1.5}
+    .row-count{color:var(--muted);font-size:13px;margin-bottom:8px;text-align:center}
+    table{width:100%;min-width:320px;border-collapse:collapse}
+    th{text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.5px;
+      color:var(--muted);padding:6px 4px 4px;border-bottom:1px solid var(--border)}
+    th input{width:100%;padding:4px 6px;background:var(--surface-2);border:1px solid var(--border);
+      border-radius:4px;font-size:13px;color:var(--text);text-align:center}
+    td{padding:2px}
+    td input{width:100%;padding:6px 8px;background:var(--surface-2);border:1px solid var(--border);
+      border-radius:4px;font-size:15px;color:var(--text);text-align:center}
+    .btn{padding:10px 14px;border-radius:var(--radius);border:none;font-size:13px;font-weight:600;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;margin:2px 0}
+    .btn:active{transform:scale(.97)}
+    .btn-success{background:var(--success);color:#000}
+    .btn-danger{background:var(--danger);color:#fff}
+    .btn-accent{background:var(--accent);color:#000}
+    .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+    .btn-full{width:100%}
+    .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+      background:var(--accent);color:#000;padding:8px 16px;border-radius:20px;
+      font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
+    .toast.show{opacity:1}
+    .voice-area{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+      padding:12px;text-align:center;margin:12px 0}
+    .voice-btn{width:50px;height:50px;border-radius:50%;border:none;background:var(--accent);color:#000;
+      font-size:20px;cursor:pointer;margin-bottom:8px}
   </style>
 </head>
 <body>
-  <div class="header">
-    <div>
-      <div class="title">Ёblist</div>
-      <div class="subtitle" id="subtitle">Динамическая таблица</div>
-    </div>
+  <div class="row-count" id="rc">Строки: 0 | Колонок: 0</div>
+  <table id="tbl">
+    <thead id="hdr"></thead>
+    <tbody id="body"></tbody>
+  </table>
+  <div style="display:flex;gap:6px;margin:8px 0">
+    <button class="btn btn-ghost btn-full" id="ac">➕ Столбец</button>
+    <button class="btn btn-ghost btn-full" id="ar">➕ Строка</button>
   </div>
-
-  <!-- колонки можно переименовать и добавлять -->
-  <div class="table-scroll">
-    <div class="row-count" id="row-count">Строки: 0 | Колонок: 0</div>
-    <table id="table">
-      <thead><tr id="header-row"><!-- колонки генерятся JS --></tr></thead>
-      <tbody id="table-body"></tbody>
-    </table>
-    <div class="col-actions">
-      <button class="btn btn-ghost btn-full" id="add-col-btn" style="font-size:12px">➕ Добавить колонку</button>
-      <button class="btn btn-danger btn-full" id="add-row-btn" style="font-size:12px">➕ Добавить строку</button>
-    </div>
+  <div style="display:flex;gap:6px">
+    <button class="btn btn-success btn-full" id="sb">💾 Сохранить</button>
+    <button class="btn btn-danger btn-full" id="cl">🧹 Очистить строки</button>
   </div>
-
-  <!-- действия -->
-  <div style="display:flex; gap:10px; margin-bottom:20px">
-    <button class="btn btn-success btn-full" id="save-btn">💾 Сохранить в Telegram</button>
-    <button class="btn btn-danger btn-full" id="clear-btn">🧹 Очистить строки</button>
+  <div class="voice-area">
+    <div class="voice-btn" id="vb">🎙</div>
+    <div style="font-size:12px;color:var(--muted)" id="vh">Нажми → распознавание</div>
   </div>
-
-  <!-- микрофон: Web Speech API (Safari/Chrome) → tg.sendData -->
-  <div class="voice-area" id="voice-area">
-    <div class="voice-btn" id="voice-btn">🎙</div>
-    <div class="voice-hint" id="voice-hint">Нажми — Web Speech распознаёт → tg.sendData в бот</div>
-  </div>
-
-  <button class="btn btn-accent btn-full" id="download-btn">📥 Скачать таблицу</button>
-
+  <button class="btn btn-accent btn-full" id="dl">📥 Скачать xlsx</button>
   <div class="toast" id="toast"></div>
 
-  <!-- Telegram Web Apps JS API -->
-  <script src="https://telegram.org/js/telegram-web-app.js?2"></script>
+  <!-- TG Web App JS -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
     "use strict";
-
-    // tg lazy init — iOS 26 WKWebView может давать window.Telegram.WebApp,
-    // но отдельные методы (setParams, MainButton) частично broken →
-    // ВСЕ tg-вызовы изолированы в try/catch, скрипт никогда не падает.
-    let tg = null;
-    let chatId = "360926813";
-    let columns = [{ name: "Колонка 1" }, { name: "Колонка 2" }];
-    let speechRec = null;
-    let isRecording = false;
-
-    // initTg: получает tg объект, извлекает chat_id, настраивает MainButton
-    // НЕ обнуляет tg при internal ошибках Telegram (iOS WKWebView бросает)
-    function initTg(attempt) {
-      try {
-        tg = window.Telegram?.WebApp;
-        if (!tg) return false;  // tg ещё не готов — будем polling
-        // chat id + user (iOS 26: initDataUnsafe может быть undefined → try/catch)
-        try {
-          const chat = tg.initDataUnsafe?.chat;
-          if (chat?.id) chatId = String(chat.id);
-          else if (tg.initDataUnsafe?.user?.id) chatId = String(tg.initDataUnsafe.user.id);
-          const name = tg.initDataUnsafe?.user?.first_name;
-          if (name) { const sub = document.getElementById("subtitle"); if (sub) sub.textContent = `Привет, ${name}!`; }
-        } catch(e) { console.warn("[tg] chat/user parse:", e); }
-        // MainButton — защищённый вызов (iOS иногда выбрасывает)
-        try {
-          if (tg.MainButton && typeof tg.MainButton.setParams === "function") {
-            tg.MainButton.setParams({ text: "✨ Готово", color: "#a78fea", text_color: "#000" });
-          }
-        } catch(e) { console.warn("[tg] MainButton.setParams:", e); }
-        // ready + setHeaderColor
-        try { if (typeof tg.ready === "function") tg.ready(); } catch(e) {}
-        try { if (typeof tg.setHeaderColor === "function") tg.setHeaderColor("#0a0a0f"); } catch(e) {}
-        console.log("[tg] initialized OK, chatId=" + chatId);
-        return true;  // tg готов — STOP polling
-      } catch(e) {
-        console.warn("[tg] initTg attempt", attempt, "error:", e);
-        // НЕ обнуляем tg — он может быть частично ready (sendData доступен, MainButton битый)
-        tg = window.Telegram?.WebApp || tg;  // сохраняем если tg есть, хоть с ошибкой
-        return tg ? true : false;  // если tg существует (хоть с ошибкой) — consider ready
-      }
+    // Минимальный tg access — get once, use everywhere
+    var tg = null; var chatId = 360926813;
+    try { tg = window.Telegram && window.Telegram.WebApp; } catch(e){}
+    try { tg && tg.ready && tg.ready(); } catch(e){}
+    // get tg from tg.js after load (race)
+    var tgReadyTry = 0;
+    function getTG() {
+      try { if (!tg && window.Telegram && window.Telegram.WebApp) tg = window.Telegram.WebApp; } catch(e){}
+      try { if (tg && tg.initDataUnsafe && tg.initDataUnsafe.chat && tg.initDataUnsafe.chat.id) chatId = String(tg.initDataUnsafe.chat.id); } catch(e){}
+      return tg;
     }
+    var tgInt = setInterval(function(){ if(getTG()){ /* tg ready */ } }, 200);
+    setTimeout(function(){ try{ clearInterval(tgInt); }catch(e){} }, 5000);
 
-    // Poll tg готовность — максимум 8 сек (iOS иногда медленнее tg.js)
-    let tgPollAttempts = 0;
-    const tgPoll = setInterval(() => {
-      tgPollAttempts++;
-      if (initTg(tgPollAttempts)) clearInterval(tgPoll);
-    }, 100);
-    setTimeout(() => { try { clearInterval(tgPoll); } catch(e){} }, 8000);
+    var columns = ["Стол","Стул","Кол-во"];
+    function toast(m){ var t = document.getElementById("toast"); t.textContent = m; t.classList.add("show"); setTimeout(function(){ t.classList.remove("show"); }, 2000); }
 
-    const toast = document.getElementById("toast");
-    const showToast = (msg) => {
-      toast.textContent = msg; toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 2500);
-    };
-
-    // --- колонки ---
-    function updateRowCount() {
-      const rows = document.querySelectorAll("#table-body tr").length;
-      document.getElementById("row-count").textContent = `Строки: ${rows} | Колонок: ${columns.length}`;
+    function updateRC(){
+      var n = document.querySelectorAll("#body tr").length, k = columns.length;
+      document.getElementById("rc").textContent = "Строки: "+n+" | Колонок: "+k;
     }
-
-    function renderHeader() {
-      const hr = document.getElementById("header-row");
-      hr.innerHTML = "";
-      columns.forEach((col, i) => {
-        const th = document.createElement("th");
-        th.innerHTML = `<input type="text" name="colname" value="${col.name}" data-idx="${i}" placeholder="Название колонки">
-          <div style="margin-top:4px">
-            <button class="btn" style="padding:2px 6px;font-size:10px;width:100%;background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border)" data-delete-col="${i}" title="Удалить колонку">✕</button>
-          </div>`;
-        hr.appendChild(th);
+    function renderHdr(){
+      var h = document.getElementById("hdr"); h.innerHTML = "";
+      columns.forEach(function(cn,i){
+        var th = document.createElement("th"); th.innerHTML = '<input type="text" value="'+cn+'" onchange="columns['+i+']=this.value">';
+        h.appendChild(th);
       });
-      const thAdd = document.createElement("th");
-      thAdd.innerHTML = `<div style="font-size:10px;color:var(--text-secondary)">Строки</div>`;
-      hr.appendChild(thAdd);
-      updateRowCount();
+      var th2 = document.createElement("th"); th2.innerHTML = '<span style="font-size:10px;color:var(--muted)">Строки</span>'; h.appendChild(th2);
+      updateRC();
     }
-
-    function addRow(data = []) {
-      const body = document.getElementById("table-body");
-      const tr = document.createElement("tr");
-      for (let i = 0; i < columns.length; i++) {
-        const td = document.createElement("td");
-        td.innerHTML = `<input type="text" name="cell" data-cidx="${i}" value="${data[i] || ''}" placeholder="0">`;
+    function addRow(){
+      var b = document.getElementById("body"), tr = document.createElement("tr");
+      columns.forEach(function(_,i){
+        var td = document.createElement("td");
+        td.innerHTML = '<input type="text" onchange="window._v[\''+b.childElementCount+'_'+i+'\']=this.value" value="">';
         tr.appendChild(td);
-      }
-      const tdDel = document.createElement("td");
-      tdDel.style.width = "40px";
-      tdDel.innerHTML = `<button class="btn btn-ghost" style="padding:4px 8px;width:100%;font-size:12px" data-del-row="true">✕</button>`;
-      tr.appendChild(tdDel);
-      body.appendChild(tr);
-    }
-
-    function renderRows() {
-      const body = document.getElementById("table-body");
-      body.innerHTML = "";
-      addRow();
-      updateRowCount();
-    }
-
-    // --- ивенты колонок ---
-    document.getElementById("header-row").addEventListener("input", (e) => {
-      if (e.target.tagName === "INPUT" && e.target.name === "colname") {
-        const idx = parseInt(e.target.dataset.idx);
-        columns[idx].name = e.target.value;
-      }
-    });
-    document.getElementById("header-row").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-delete-col]");
-      if (btn) {
-        const idx = parseInt(btn.dataset.deleteCol);
-        columns.splice(idx, 1);
-        renderHeader();
-        document.querySelectorAll("#table-body tr").forEach(tr => {
-          const cells = tr.querySelectorAll("td");
-          if (cells[idx]) cells[idx].remove();
-        });
-        updateRowCount();
-      }
-    });
-    document.getElementById("add-col-btn").addEventListener("click", () => {
-      columns.push({ name: `Колонка ${columns.length + 1}` });
-      renderHeader();
-      document.querySelectorAll("#table-body tr").forEach(tr => {
-        const td = document.createElement("td");
-        td.innerHTML = `<input type="text" name="cell" placeholder="0">`;
-        const delTd = tr.querySelector("td:last-child");
-        tr.insertBefore(td, delTd);
       });
-      updateRowCount();
-    });
-    document.getElementById("add-row-btn").addEventListener("click", () => { addRow(); updateRowCount(); });
-    document.getElementById("table-body").addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-del-row]");
-      if (btn) { btn.closest("tr").remove(); updateRowCount(); }
-    });
+      var tdD = document.createElement("td"); tdD.style.width="36px";
+      tdD.innerHTML = '<button class="btn btn-ghost" style="padding:2px 6px;font-size:11px" onclick="this.closest(\"tr\").remove();updateRC()">✕</button>';
+      tr.appendChild(tdD);
+      b.appendChild(tr);
+      if(!window._v) window._v={};
+      updateRC();
+    }
+    renderHdr(); addRow();
 
-    // --- сохранить → tg.MainButton.sendData → bot.py (web_app_query → answerWebAppQuery) ---
-    // tg.MainButton.sendData(payload) работает В menu_button ("Ёblist" внизу) context —
-    // Telegram автоматом посылает web_app_query боту с вашим payload. Bot отвечает
-    // через answerWebAppQuery → пользователь видит alert. (tg.sendData — только KeyboardButton.)
-    document.getElementById("save-btn").addEventListener("click", async () => {
-      const rows = [];
-      document.querySelectorAll("#table-body tr").forEach(tr => {
-        const vals = Array.from(tr.querySelectorAll("input[name='cell']")).map(i => i.value);
-        if (vals.some(v => v)) rows.push(vals);
+    // Сохранить → tg.MainButton.sendData (работает в menu button context)
+    document.getElementById("sb").addEventListener("click", function(){
+      var rows=[];
+      document.querySelectorAll("#body tr").forEach(function(tr){
+        var vals = [];
+        tr.querySelectorAll("input[type=text]").forEach(function(i){ vals.push(i.value); });
+        if (vals.some(function(v){return v!==undefined&&v!==null&&v!=="";})) rows.push(vals);
       });
-      if (!rows.length) { showToast("Нечего сохранять — добавьте строки"); return; }
-      const payload = JSON.stringify({ action: "add_rows", chat_id: chatId, columns: columns.map(c => c.name), rows: rows });
-
-      // ✅ tg.MainButton.sendData — работает в menu_button context (iOS/Android/Desktop)
-      var mb = tg && tg.MainButton;
-      if (mb && typeof mb.sendData === "function") {
-        try {
-          mb.sendData(payload);       // Telegram → bot web_app_query → answerWebAppQuery
-          showToast("✅ Отправлено в Telegram!");
-          // после sendData Web App часто закрывается автоматически — подвесим MainButton на всякий:
-          try { mb.enable(); } catch(e) {}
-          return;
-        } catch(e) {
-          console.warn("[tg] MainButton.sendData threw:", e);
-        }
+      if(!rows.length){ toast("Нечего сохранять"); return; }
+      var payload = JSON.stringify({ action:"add_rows", chat_id:chatId, columns:columns, rows:rows });
+      // Всегда пытаемся MainButton.sendData (работает в menu_button)
+      var t = getTG();
+      if(t && t.MainButton && typeof t.MainButton.sendData === "function"){
+        try { t.MainButton.sendData(payload); toast("✅ Отправлено!"); return; } catch(e){ console.warn("mb.sendData err:",e); }
       }
-      // fallback: KeyboardButton tg.sendData (если MainButton недоступен — редкость)
-      if (tg && typeof tg.sendData === "function") {
-        try { tg.sendData(payload); showToast("✅ Отправлено!"); return; } catch(e) {}
+      // fallback: tg.sendData (KeyboardButton)
+      if(t && typeof t.sendData === "function"){
+        try { t.sendData(payload); toast("✅ Отправлено!"); return; } catch(e){}
       }
-      // fallback: вне Telegram
-      showToast("💾 " + rows.length + " строк | " + columns.length + " колонок (вне Telegram)");
-      console.log("[no-tg] payload:", payload);
+      toast("⚠️ Вне Telegram — откройте в чате с ботом");
+      console.log("PAYLOAD:", payload);
     });
 
-    // --- очистить строки ---
-    document.getElementById("clear-btn").addEventListener("click", () => {
-      document.getElementById("table-body").innerHTML = "";
-      addRow(); updateRowCount();
-      showToast("Строки очищены");
+    // add col / row / clear / download
+    document.getElementById("ac").addEventListener("click", function(){ columns.push(prompt("Название колонки:") || ("Колонка "+(columns.length+1))); renderHdr(); });
+    document.getElementById("ar").addEventListener("click", function(){ addRow(); });
+    document.getElementById("cl").addEventListener("click", function(){ document.getElementById("body").innerHTML=""; addRow(); updateRC(); toast("Очищено"); });
+    document.getElementById("dl").addEventListener("click", function(){
+      var p = JSON.stringify({ action:"download", chat_id:chatId });
+      var t = getTG();
+      if(t && t.MainButton && typeof t.MainButton.sendData === "function"){ try{t.MainButton.sendData(p);} catch(e){} toast("📥 Отправлено"); }
+      else if(t && typeof t.sendData==="function"){ try{t.sendData(p);} catch(e){} toast("📥 Отправлено"); }
+      else toast("📥 В чате: /download");
     });
 
-    // --- скачать: tg.MainButton.sendData action=download → bot.py ---
-    document.getElementById("download-btn").addEventListener("click", () => {
-      const payload = JSON.stringify({ action: "download", chat_id: chatId });
-      var mb = tg && tg.MainButton;
-      if (mb && typeof mb.sendData === "function") {
-        try { mb.sendData(payload); showToast("📥 Запрос файла отправлен боту"); return; } catch(e) {}
+    // 🎙 Web Speech (Desktop) → whisper fallback (iOS)
+    var rec=null;
+    document.getElementById("vb").addEventListener("click", function(){
+      if(rec){ try{rec.stop();}catch(e){} rec=null; this.textContent="🎙"; document.getElementById("vh").textContent="Слушаю..."; return; }
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if(!SR){ toast("🎙 Web Speech недоступен · voice→whisper в Telegram"); document.getElementById("vh").textContent="Запишите voice message → бот → whisper"; return; }
+      try{
+        rec = new SR(); rec.lang="ru-RU"; rec.interimResults=false; rec.maxAlternatives=1;
+        rec.onresult = function(e){
+          var t = e.results[0][0].transcript.trim();
+          document.getElementById("vh").textContent="Распознано: "+t;
+          toast("✅ "+t);
+          var parts = t.split(",").map(function(s){return s.trim();}).filter(Boolean);
+          var inputs = document.querySelector("#body tr") && document.querySelector("#body tr").querySelectorAll("input[type=text]");
+          if(inputs && inputs.length){ parts.forEach(function(v,i){ if(inputs[i]) inputs[i].value=v; }); }
+        };
+        rec.onerror = function(e){ toast("❌ "+e.error); };
+        rec.onend = function(){ rec=null; this.textContent="🎙"; document.getElementById("vh").textContent="Нажми — распознавание"; };
+        rec.start();
+        this.textContent="⏹"; document.getElementById("vh").textContent="Слушаю...";
+      }catch(e){
+        toast("🚫 Web Speech error → voice→whisper");
+        document.getElementById("vh").textContent="Запишите voice message → бот";
       }
-      // fallback KeyboardButton tg.sendData
-      if (tg && typeof tg.sendData === "function") {
-        try { tg.sendData(payload); showToast("📥 Запрос отправлен"); return; } catch(e) {}
-      }
-      showToast("📥 Откройте чат с ботом /download");
     });
-
-    // --- голос: Web Speech API (macOS Safari/Chrome Desktop) ---
-    // iOS/WebKit: SpeechRecognition НЕ поддерживается → fallback на Telegram voice message → whisper
-    const voiceBtn = document.getElementById("voice-btn");
-    const voiceArea = document.getElementById("voice-area");
-    const voiceHint = document.getElementById("voice-hint");
-    // isRecording + speechRec объявлены в global scope (line 119-120)
-
-    voiceBtn.addEventListener("click", async () => {
-      if (isRecording) {
-        try { if (speechRec) speechRec.stop(); } catch(e) {}
-        voiceBtn.textContent = "🎙"; voiceBtn.classList.remove("recording");
-        voiceArea.classList.remove("recording");
-        voiceHint.textContent = "Распознаю...";
-        isRecording = false;
-        return;
-      }
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        voiceHint.textContent = "Web Speech API не поддерживается в этом браузере";
-        showToast("🚫 Web Speech недоступен");
-        return;
-      }
-      try {
-        speechRec = new SpeechRecognition();
-        speechRec.lang = "ru-RU";
-        speechRec.interimResults = false;
-        speechRec.maxAlternatives = 1;
-        speechRec.onresult = (e) => {
-          const text = e.results[0][0].transcript.trim();
-          voiceHint.textContent = `Распознано: «${text}»`;
-          showToast("✅ " + text);
-          const parts = text.split(",").map(s => s.trim()).filter(Boolean);
-          const firstRow = document.querySelector("#table-body tr");
-          if (firstRow && parts.length >= 2) {
-            const inputs = firstRow.querySelectorAll("input[name='cell']");
-            parts.forEach((v, i) => { if (inputs[i]) inputs[i].value = v; });
-          }
-        };
-        speechRec.onerror = (e) => {
-          voiceHint.textContent = "Ошибка: " + e.error;
-          showToast("❌ " + e.error);
-        };
-        speechRec.onend = () => {
-          voiceBtn.textContent = "🎙"; voiceBtn.classList.remove("recording");
-          voiceArea.classList.remove("recording");
-          isRecording = false;
-          voiceHint.textContent = "Нажми — Web Speech распознаёт → tg.sendData в бот";
-        };
-        speechRec.start();
-        voiceBtn.textContent = "⏹"; voiceBtn.classList.add("recording");
-        voiceArea.classList.add("recording");
-        voiceHint.textContent = "Слушаю...";
-        isRecording = true;
-      } catch (err) {
-        // macOS Safari / iOS: InvalidStateError (already started) или микрофон недоступен
-        voiceHint.textContent = "Web Speech недоступен. Запишите voice message в Telegram — бот распознает через whisper.";
-        showToast("🎙 voice → whisper (в чате с ботом)");
-        isRecording = false;
-      }
-    });    // <- ЗАКРЫТИЕ voiceBtn.addEventListener("click", ...)
-
-    // back swipe (iOS-like)
-    let startY = 0;
-    document.addEventListener("touchstart", (e) => { startY = e.touches[0].clientY; }, { passive: true });
-    document.addEventListener("touchend", () => { if (startY > 200 && tg?.close) tg.close(); });
-
-    // init
-    renderHeader();
-    renderRows();
   </script>
 </body>
 </html>
