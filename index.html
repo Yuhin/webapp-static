@@ -126,10 +126,11 @@
       if(t && t.MainButton && typeof t.MainButton.sendData === "function"){
         try { t.MainButton.sendData(payload); toast("✅ Отправлено!"); return; } catch(e){ console.warn("mb.sendData err:",e); }
       }
-      // fallback: tg.sendData (KeyboardButton)
-      if(t && typeof t.sendData === "function"){
-        try { t.sendData(payload); toast("✅ Отправлено!"); return; } catch(e){}
-      }
+      // fallback: tg.sendData (KeyboardButton context)
+      if(t && typeof t.sendData === "function"){ try { t.sendData(payload); toast("✅ Отправлено!"); return; } catch(e){ console.warn("sendData err:",e); } }
+      // fallback: direct window.Telegram.WebApp.MainButton (menu_button context, tg.js)
+      var wd = window.Telegram && window.Telegram.WebApp;
+      if(wd && wd.MainButton && typeof wd.MainButton.sendData === "function"){ try{wd.MainButton.sendData(payload); toast("✅ Отправлено!"); return;}catch(e){console.warn("wd.mb.sendData err:",e);} }
       toast("⚠️ Вне Telegram — откройте в чате с ботом");
       console.log("PAYLOAD:", payload);
     });
@@ -144,7 +145,7 @@
       if(!t && window.Telegram && window.Telegram.WebApp) t = window.Telegram.WebApp;
       if(t && t.MainButton && typeof t.MainButton.sendData === "function"){ try{t.MainButton.sendData(p);} catch(e){} toast("📥 Отправлено"); }
       else if(t && typeof t.sendData==="function"){ try{t.sendData(p);} catch(e){} toast("📥 Отправлено"); }
-      else toast("📥 В чате: /download");
+      else { var wd=window.Telegram&&window.Telegram.WebApp; if(wd&&wd.MainButton&&typeof wd.MainButton.sendData==="function"){try{wd.MainButton.sendData(p);}catch(e){}toast("📥 Отправлено");} else toast("📥 В чате: /download"); }
     });
 
     // 🎙 Web Speech (Desktop) → whisper fallback (iOS)
