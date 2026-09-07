@@ -248,9 +248,10 @@
       if (btn) { btn.closest("tr").remove(); updateRowCount(); }
     });
 
-    // --- сохранить → tg.sendData → bot.py (web_app_data) ---
-    // tg.sendData доставляется bot'у ТОЛЬКО через KeyboardButton(web_app) из /start.
-    // Menu button ("Ёblist") → tg.sendData вызывается, но bot его НЕ получит.
+    // --- сохранить → tg.MainButton.sendData → bot.py (web_app_query → answerWebAppQuery) ---
+    // tg.MainButton.sendData(payload) работает В menu_button ("Ёblist" внизу) context —
+    // Telegram автоматом посылает web_app_query боту с вашим payload. Bot отвечает
+    // через answerWebAppQuery → пользователь видит alert. (tg.sendData — только KeyboardButton.)
     document.getElementById("save-btn").addEventListener("click", async () => {
       const rows = [];
       document.querySelectorAll("#table-body tr").forEach(tr => {
@@ -258,30 +259,28 @@
         if (vals.some(v => v)) rows.push(vals);
       });
       if (!rows.length) { showToast("Нечего сохранять — добавьте строки"); return; }
-      const payload = { action: "add_rows", chat_id: chatId, columns: columns.map(c => c.name), rows: rows };
+      const payload = JSON.stringify({ action: "add_rows", chat_id: chatId, columns: columns.map(c => c.name), rows: rows });
 
-      // ✅ ВСЕГДА tg.sendData если tg доступен (KeyboardButton → bot получит,
-      //   menu_button → toast + инструкция, вне Telegram → fallback)
-      if (tg && typeof tg.sendData === "function") {
-        try { tg.sendData(JSON.stringify(payload)); } catch(e) { console.warn("[tg] sendData threw:", e); }
-        var hasInitData = false;
-        try { hasInitData = !!(tg.initData && tg.initData.length > 0) || !!(tg.initDataUnsafe && (tg.initDataUnsafe.chat?.id || tg.initDataUnsafe.user?.id)); } catch(e) {}
-        if (hasInitData) {
+      // ✅ tg.MainButton.sendData — работает в menu_button context (iOS/Android/Desktop)
+      var mb = tg && tg.MainButton;
+      if (mb && typeof mb.sendData === "function") {
+        try {
+          mb.sendData(payload);       // Telegram → bot web_app_query → answerWebAppQuery
           showToast("✅ Отправлено в Telegram!");
-        } else {
-          // menu_button context (initData пуст) → показываем инструкцию
-          showToast("⚠️ Через меню tg.sendData не работает → открываю чат с ботом...");
-          try { if (tg.openLink) tg.openLink("https://t.me/Eblistbot?start=table"); } catch(e) {}
-          try {
-            if (tg.showPopup && typeof tg.showPopup === "function") {
-              tg.showPopup({ type: "alert", title: "Ёblist", message: "Через меню 'Ёblist' tg.sendData не доставляется боту. Нажмите /start в чате с ботом → кнопка '📋 Ёblist — открыть таблицу' ВНИЗУ чата → сохраняйте через 💾 Сохранить ✅" });
-            }
-          } catch(e) {}
+          // после sendData Web App часто закрывается автоматически — подвесим MainButton на всякий:
+          try { mb.enable(); } catch(e) {}
+          return;
+        } catch(e) {
+          console.warn("[tg] MainButton.sendData threw:", e);
         }
-      } else {
-        showToast("💾 " + rows.length + " строк | " + columns.length + " колонок (fallback: вне Telegram)");
-        console.log("[no-tg] payload:", payload);
       }
+      // fallback: KeyboardButton tg.sendData (если MainButton недоступен — редкость)
+      if (tg && typeof tg.sendData === "function") {
+        try { tg.sendData(payload); showToast("✅ Отправлено!"); return; } catch(e) {}
+      }
+      // fallback: вне Telegram
+      showToast("💾 " + rows.length + " строк | " + columns.length + " колонок (вне Telegram)");
+      console.log("[no-tg] payload:", payload);
     });
 
     // --- очистить строки ---
@@ -291,14 +290,18 @@
       showToast("Строки очищены");
     });
 
-    // --- скачать: через tg.sendData action=download ---
+    // --- скачать: tg.MainButton.sendData action=download → bot.py ---
     document.getElementById("download-btn").addEventListener("click", () => {
-      if (tg && tg.sendData) {
-        tg.sendData(JSON.stringify({ action: "download", chat_id: chatId }));
-        showToast("📥 Запрос файла отправлен боту");
-      } else {
-        showToast("📥 Нажмите в Telegram для скачивания");
+      const payload = JSON.stringify({ action: "download", chat_id: chatId });
+      var mb = tg && tg.MainButton;
+      if (mb && typeof mb.sendData === "function") {
+        try { mb.sendData(payload); showToast("📥 Запрос файла отправлен боту"); return; } catch(e) {}
       }
+      // fallback KeyboardButton tg.sendData
+      if (tg && typeof tg.sendData === "function") {
+        try { tg.sendData(payload); showToast("📥 Запрос отправлен"); return; } catch(e) {}
+      }
+      showToast("📥 Откройте чат с ботом /download");
     });
 
     // --- голос: Web Speech API (macOS Safari/Chrome Desktop) ---
